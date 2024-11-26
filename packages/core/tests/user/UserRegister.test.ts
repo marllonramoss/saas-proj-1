@@ -1,62 +1,67 @@
-import UserRegister from '../../src/user/service/UserRegister'; // Importe o seu caso de uso
-import RepositoryPort from '../../src/user/ports/RepositoryPort'; // Importe o repositório
-import PasswordPort from '../../src/user/ports/PasswordPort'; // Importe o PasswordPort
+import UserRegister from '../../src/user/service/UserRegister'; // Importando a classe que vamos testar
+import User from '../../src/user/model/User'; // A interface do User
+import PasswordPort from '../../src/user/ports/PasswordPort'; // Interface do serviço de senha
+import RepositoryPort from '../../src/user/ports/RepositoryPort'; // Interface do repositório
 
-// Crie mocks para as dependências
-const mockRepository = {
-    findByEmail: jest.fn(),
-    save: jest.fn(),
+// Criando os mocks
+const mockRepo = {
+    findByEmail: jest.fn(), // Criando o mock da função findByEmail
+    save: jest.fn(), // Mock do método que salva o usuário
 };
 
 const mockPasswordPort = {
-    hashPassword: jest.fn(),
+    hashPassword: jest.fn(), // Mock do método que realiza o hash da senha
+    comparePassword: jest.fn(), // Mock do método que compara senhas
 };
 
+// Criando o objeto do caso de uso (UserRegister)
 const userRegister = new UserRegister(
-    mockRepository as any,
-    mockPasswordPort as any,
+    mockRepo as RepositoryPort,
+    mockPasswordPort as PasswordPort,
 );
 
-describe('UserRegister', () => {
-    it('should throw an error if the email is already used', async () => {
-        const user = { email: 'test@example.com', password: 'password123' };
-        mockRepository.findByEmail.mockResolvedValueOnce(user); // Simula que o usuário já existe
+// Teste: Verificando se o erro ocorre quando o email já está em uso
+it('should throw error if email is already used', async () => {
+    // Arrange: Preparando o que vai acontecer
+    const existingUser = { email: 'test@example.com', password: 'password' }; // Simulando um usuário existente
+    mockRepo.findByEmail.mockResolvedValue(existingUser); // O mock retorna o usuário com o email 'test@example.com'
 
-        await expect(userRegister.execute(user)).rejects.toThrow(
-            'Email already used',
-        );
-    });
+    const newUser: User = {
+        email: 'test@example.com', // O novo usuário tem o mesmo email
+        password: 'password123', // Senha do novo usuário
+    };
 
-    it('should hash the password before saving the user', async () => {
-        const user = { email: 'test@example.com', password: 'password123' };
-        mockPasswordPort.hashPassword.mockResolvedValueOnce(
-            'hashed-password123',
-        );
-        mockRepository.findByEmail.mockResolvedValueOnce(null); // Simula que o email não está em uso
+    // Act & Assert: Aqui vamos testar se o erro é lançado
+    await expect(userRegister.execute(newUser)) // Tentamos executar o caso de uso
+        .rejects // Esperamos que o código rejeite (lance um erro)
+        .toThrow('Email already used'); // Esperamos que o erro seja 'Email already used'
 
-        await userRegister.execute(user);
+    // Verifica se o método de salvar não foi chamado (já que não podemos salvar o usuário com o email repetido)
+    expect(mockRepo.save).not.toHaveBeenCalled();
+});
 
-        expect(mockPasswordPort.hashPassword).toHaveBeenCalledWith(
-            'password123',
-        );
-        expect(mockRepository.save).toHaveBeenCalledWith({
-            email: 'test@example.com',
-            password: 'hashed-password123',
-        });
-    });
+it('should register a new user successfully', async () => {
+    // Arrange: Preparando os mocks e os dados
+    const newUser: User = {
+        email: 'newuser@example.com',
+        password: 'password123',
+    };
 
-    it('should save the user when registration is successful', async () => {
-        const user = { email: 'test@example.com', password: 'password123' };
-        mockRepository.findByEmail.mockResolvedValueOnce(null); // Simula que o email não está em uso
-        mockPasswordPort.hashPassword.mockResolvedValueOnce(
-            'hashed-password123',
-        );
+    const hashedPassword = 'hashed_password'; // Vamos simular que a senha foi "hashada" para esse valor
+    mockRepo.findByEmail.mockResolvedValue(null); // Simulamos que o usuário com esse email não existe
+    mockPasswordPort.hashPassword.mockResolvedValue(hashedPassword); // Simulamos o hash da senha
 
-        await userRegister.execute(user);
+    // Act: Executando o caso de uso
+    await userRegister.execute(newUser);
 
-        expect(mockRepository.save).toHaveBeenCalledWith({
-            email: 'test@example.com',
-            password: 'hashed-password123',
-        });
+    // Assert: Verificando as chamadas e o comportamento esperado
+    expect(mockRepo.findByEmail).toHaveBeenCalledWith(newUser.email); // O repositório deve ter tentado encontrar o usuário pelo email
+    expect(mockPasswordPort.hashPassword).toHaveBeenCalledWith(
+        newUser.password,
+    ); // O método de hash da senha deve ter sido chamado com a senha
+    expect(mockRepo.save).toHaveBeenCalledWith({
+        // Verificando se o repositório tenta salvar o usuário
+        ...newUser,
+        password: hashedPassword, // O usuário deve ser salvo com a senha hashada
     });
 });

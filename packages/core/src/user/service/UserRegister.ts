@@ -22,6 +22,7 @@ export default class UserRegister implements useCase {
             await this.repo.save(userToSave);
         } catch (error) {
             console.log('Error in user Registration', error);
+            throw error;
         }
     }
 }
