@@ -1,7 +1,7 @@
-import UserRegister from '../../src/user/service/UserRegister'; // Importando a classe que vamos testar
-import User from '../../src/user/model/User'; // A interface do User
-import PasswordPort from '../../src/user/ports/PasswordPort'; // Interface do serviço de senha
-import RepositoryPort from '../../src/user/ports/RepositoryPort'; // Interface do repositório
+import UserRegister from '../../user/service/UserRegister'; // Importando a classe que vamos testar
+import User from '../../user/model/User'; // A interface do User
+import PasswordPort from '../../user/ports/PasswordPort'; // Interface do serviço de senha
+import RepositoryPort from '../../user/ports/RepositoryPort'; // Interface do repositório
 
 // Criando os mocks
 const mockRepo = {
